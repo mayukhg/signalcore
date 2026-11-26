@@ -419,7 +419,7 @@ Evidence = 100 × (${w.q}·Q + ${w.b}·B + ${w.c}·C) × rule penalty × skeptic
                single source, or < 50% of complainers use the feature
   skeptic penalty 0.5–1.0, only with cited SQL findings</pre>
       <h3 style="margin-top:14px">Pattern (separate from confidence)</h3><div class="tablewrap"><table><tbody>
-      <tr><td>${chip('commercial_mirage')}</td><td class="muted">top account > 60% of dollars and B < 0.3</td></tr><tr><td>${chip('silent_churn')}</td><td class="muted">renewal-cohort decline ≥ 30% and Q < 0.55</td></tr>
+      <tr><td>${chip('commercial_mirage')}</td><td class="muted">top account > 60% of dollars and B < 0.3</td></tr><tr><td>${chip('silent_churn')}</td><td class="muted">renewal-cohort decline ≥ 30%, and Q < 0.55 or at least twice as many accounts quietly declining as complaining</td></tr>
       <tr><td>${chip('vocal_minority')}</td><td class="muted">Q ≥ 0.45, B < 0.25, C < 0.65</td></tr><tr><td>${chip('high_signal')}</td><td class="muted">score ≥ 70 and every pillar ≥ 0.45</td></tr><tr><td>${chip('emerging')}</td><td class="muted">everything else</td></tr></tbody></table></div></div>
     <div class="panel"><h2>2 · Cost of Delay and CD3</h2><pre class="code">Retention CoD/wk = Σ affected accounts renewing ≤ ${c.horizon_weeks} wk:
     ARR × p_churn ÷ max(weeks to renewal, ${c.min_weeks})

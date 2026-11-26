@@ -9,3 +9,6 @@ __pycache__/
 .pytest_cache/
 signalcore-deck.html
 signalcore-deck.pdf
+signalcore-walkthrough.mp4
+signalcore-walkthrough.chapters.txt
+video/audio/

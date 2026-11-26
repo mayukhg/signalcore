@@ -2,6 +2,7 @@
 import contextlib
 import datetime as dt
 import json
+import os
 import threading
 import time
 
@@ -57,6 +58,9 @@ class Run:
                 self.db.commit()
             self.on_event({"type": "step_finished", "step_no": no, "node": node, "label": label, "ms": ms,
                            "cost": round(s.meter.cost, 4), "summary": s.detail.get("summary")})
+            pace = float(os.environ.get("SIGNALCORE_STEP_DELAY", "0") or 0)   # demo pacing only; logged ms is unaffected
+            if pace > 0:
+                time.sleep(pace)
 
     def finish(self, status="done"):
         self.db.execute("UPDATE agent_runs SET status = ?, finished_at = ? WHERE run_id = ?",
