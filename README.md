@@ -1,39 +1,71 @@
 # SignalCore
 
-An AI-powered product evidence layer that triangulates what customers **say** (calls, tickets, ideas),
-what they **do** (product telemetry) and what they **pay** (CRM) into an Evidence Score per product theme.
+**Feedback tools tell you what customers said. SignalCore tells you whether to believe it, and what waiting costs.**
 
-This repo is an interview demo built on fully synthetic data for a fictional identity, device and
-AI-agent access platform ("Keystone Directory").
+SignalCore is an AI workflow engine for Product Ops. It replaces three grinds that waste senior PM time:
 
-## Contents
+| The grind | Engine (LangGraph + Claude) | Output |
+|---|---|---|
+| Manual Pendo data collation | Triangulation: SQL joins of telemetry and revenue onto each theme | Evidence synthesis: themes, Evidence Score, cited quotes |
+| Tracing cross-portfolio Jira dependencies | Dependency Tracer: follows "blocks" links, critical-path weeks, inherited Cost of Delay | Portfolio risk detection |
+| Parsing CAB notes and crafting PBRs | CAB Agent, PBR Agent, Grounding Judge | Grounded Product Business Reviews |
 
-| File | What it is |
-|---|---|
-| `schema.sql` | 13-table schema: three pillars, reference data, agent-written outputs |
-| `generate.py` | Deterministic data generator (seed 42) + reference scorer. Writes `signalcore.db` and `app_data.json` |
-| `app_data.json` | Scored output consumed by the prototype |
-| `prototype.template.html` | UX prototype source (PM Workbench, Executive View, evaluation, schema, pipeline) |
-| `build_prototype.py` | Injects `app_data.json` and `schema.sql` into the template |
-| `signalcore-prototype.html` | Built, self-contained prototype; open in a browser |
-| `deck/project/` | Pitch deck source (slide HTML + CSS) |
+Prioritisation uses **Cost of Delay**. Each theme's CoD per week is discounted by its **Evidence Score** (confidence from Say, Do and Pay triangulation plus a Skeptic Agent), then divided by the weeks to deliver, including weeks blocked by other teams. That gives **CD3**, and the backlog is ranked by it.
 
-## Run
+Everything runs on a deterministic synthetic tenant ("Keystone Directory", a fictional identity, device and AI-agent access platform) with ground truth planted for evals.
+
+## Quick start
 
 ```bash
-python3 generate.py          # stdlib only, ~5 s; builds signalcore.db (~40 MB, git-ignored)
-python3 build_prototype.py   # rebuilds signalcore-prototype.html
+make demo            # venv + deps + data + latest run + app on http://localhost:8000
 ```
 
-Use DuckDB instead of SQLite with `ATTACH 'signalcore.db' (TYPE sqlite);`.
+| Command | What it does |
+|---|---|
+| `make data` | Regenerate the synthetic tenant (seed 42) |
+| `make record` | Live pipeline run with Claude; records every call to `fixtures/llm_cache.jsonl` (needs `ANTHROPIC_API_KEY`) |
+| `make run` | Run the pipeline: live if a key is set, else replay the recorded calls, else stub |
+| `make test` | Tests in stub mode (no key, no network) |
+| `make standalone` | `signalcore-standalone.html`: the whole app in one file with the latest run embedded |
 
-## Scoring
+### Modes
+- **live**: calls the Anthropic API (Opus 5.5 for reasoning, Sonnet 5.5 for judging and CAB parsing, Haiku 5.5 for per-item enrichment).
+- **replay**: answers from the recorded cache, offline and deterministic. Good for demos without wifi.
+- **stub**: local stand-ins for tests; numbers are real, wording is placeholder.
+
+## Pipeline
 
 ```
-evidence = 100 × (0.30·Say + 0.35·Do + 0.35·Pay) × skeptic_penalty
+resolve → cab → enrich → cluster → link → triangulate → deps → score → skeptic → rescore → risks → pbr → judge ⟲ (≤2 retries) → evals
 ```
 
-Confidence (the score) and pattern (high signal, silent churn, commercial mirage, vocal minority,
-emerging) are separate outputs. Twelve themes with known ground truth are planted in the data so
-clustering and scoring can be evaluated. The clustering step is simulated with a fixed error rate;
-the agent pipeline on the prototype's Agent Pipeline tab is a sketch, not an implementation.
+| Node | Kind | What it does |
+|---|---|---|
+| Identity resolver | code | Messy reporter emails and company names → accounts (contact email, domain, alias domain, fuzzy name) |
+| CAB Agent | Claude Sonnet | Extracts pains, asks, praise and commitments from CAB meeting notes, with line numbers |
+| Enrichment | Claude Haiku, batched | Product feedback?, urgency, sentiment, workaround, persona |
+| Cluster Agent | TF-IDF + clustering, Claude Opus | Clusters, then names, merges and maps themes to features |
+| Triangulation | code (SQL) | Abandonment vs non-complainers, renewal-cohort usage decline, linked deals and ARR |
+| Dependency Tracer | code | Theme → Jira epic → unfinished blockers, critical-path weeks; blockers inherit downstream CoD |
+| Scoring | code | Evidence Score, pattern, Cost of Delay, CD3, urgency profile |
+| Skeptic Agent | Claude Opus + read-only SQL | Tries to refute each theme; may only lower confidence, with cited rows |
+| Risk detection | code | Silent churn, concentration, weak bets, under-cited PRDs, dependency bottlenecks, capital misallocation |
+| PBR Agent | Claude Opus | Product Business Reviews from a fixed fact table; every claim cites facts |
+| Grounding Judge | code + Claude Sonnet | Numbers checked in code, meaning checked by a model; failures rewritten or dropped |
+| Ask | Claude Opus + SQL + retrieval | RAG over verbatims and CAB statements, with SQL for numbers |
+
+Agents query through a read-only, allow-listed SQLite connection: writes, multiple statements and ground-truth (`gt_*`) columns are refused.
+
+## Layout
+
+```
+schema.sql                  31 tables: pillars, Jira, CAB, and everything the agents write
+signalcore/data/            deterministic generator (text.py builds messy feedback; delivery.py builds Jira + CAB notes)
+signalcore/pipeline/        LangGraph nodes (intake, cluster, score, skeptic, risks, pbr, evals, graph)
+signalcore/llm.py           Claude client with live / replay / stub modes and cost metering
+signalcore/ask.py           RAG agent
+signalcore/api.py           FastAPI app
+web/                        single-page UI (no build step)
+tests/                      end-to-end and unit tests
+deck/project/               pitch deck source
+```

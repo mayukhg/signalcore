@@ -1,0 +1,9 @@
+anthropic>=2.14
+langgraph>=1.2
+fastapi>=0.165
+uvicorn[standard]>=0.54
+scikit-learn>=1.9
+numpy>=2.5
+scipy
+pytest>=9
+httpx>=0.28

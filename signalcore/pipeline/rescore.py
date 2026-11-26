@@ -16,6 +16,9 @@ class ExistingRun(Run):
         import threading
         self._lock = threading.Lock()
 
+    def step(self, node, label):
+        return super().step(node, "Recalculation after PM override · " + label)
+
 
 def rescore(db_path, run_id):
     run = ExistingRun(db_path, run_id)

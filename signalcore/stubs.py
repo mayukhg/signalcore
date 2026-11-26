@@ -35,12 +35,12 @@ def _text(params):
 
 
 def _msg(obj, model, tokens=(1000, 300)):
-    return {"model": model, "stop_reason": "end_turn", "usage": {"input_tokens": tokens[0], "output_tokens": tokens[1]},
+    return {"model": model, "stop_reason": "end_turn", "usage": {"input_tokens": 0, "output_tokens": 0},
             "content": [{"type": "text", "text": json.dumps(obj)}]}
 
 
 def _tool(name, inp, model):
-    return {"model": model, "stop_reason": "tool_use", "usage": {"input_tokens": 1500, "output_tokens": 200},
+    return {"model": model, "stop_reason": "tool_use", "usage": {"input_tokens": 0, "output_tokens": 0},
             "content": [{"type": "tool_use", "id": f"toolu_stub_{abs(hash(json.dumps(inp, sort_keys=True))) % 10**8}", "name": name, "input": inp}]}
 
 
