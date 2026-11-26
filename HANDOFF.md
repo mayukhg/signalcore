@@ -2,7 +2,7 @@
 
 State: branch `v2-working-app`. Data generator, full LangGraph pipeline, FastAPI app, 10-view UI, tests (7 passing in stub mode) and standalone export are done. Nothing has run against the live Claude API yet.
 
-Needs `ANTHROPIC_API_KEY` set as an environment variable in the cloud environment.
+Needs a Claude API key: `ANTHROPIC_API_KEY`, or `SIGNALCORE_ANTHROPIC_API_KEY` if that is unset. The cloud environment withholds `ANTHROPIC_API_KEY` from sessions, so the key is provided as `SIGNALCORE_ANTHROPIC_API_KEY`; `signalcore/llm.py` (`api_key()`) reads either and passes it explicitly to the Anthropic client.
 
 Status (2026-11-26): the Default environment has an `ANTHROPIC_API_KEY` variable, but the container this session ran in started before it was added, so the key was not visible. Start a **new session** so the variable loads. Network secrets cannot be used for api.anthropic.com. On a fresh clone, `make setup`, `make data` (fixed: the generator now creates `data/`) and `make test` (7 passed) all work.
 

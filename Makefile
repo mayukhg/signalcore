@@ -7,7 +7,7 @@ setup:            ## create venv and install dependencies
 data:             ## regenerate the synthetic tenant (deterministic)
 	$(PY) -m signalcore.data.generate
 
-run:              ## run the pipeline (live if ANTHROPIC_API_KEY is set, else replay, else stub)
+run:              ## run the pipeline (live if ANTHROPIC_API_KEY or SIGNALCORE_ANTHROPIC_API_KEY is set, else replay, else stub)
 	$(PY) -m signalcore.pipeline.graph
 
 record:           ## live run that records every model call to fixtures/llm_cache.jsonl

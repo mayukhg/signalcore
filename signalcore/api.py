@@ -79,7 +79,7 @@ class RunReq(BaseModel):
 def start_run(req: RunReq):
     mode = req.mode or default_mode()
     if mode == "live" and default_mode() != "live":
-        raise HTTPException(400, "Live runs need ANTHROPIC_API_KEY on the server.")
+        raise HTTPException(400, "Live runs need ANTHROPIC_API_KEY (or SIGNALCORE_ANTHROPIC_API_KEY) on the server.")
     rid = "run-" + dt.datetime.now().strftime("%Y%m%d-%H%M%S")
     with _lock:
         _events[rid] = []

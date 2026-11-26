@@ -23,13 +23,13 @@ make demo            # venv + deps + data + latest run + app on http://localhost
 | Command | What it does |
 |---|---|
 | `make data` | Regenerate the synthetic tenant (seed 42) |
-| `make record` | Live pipeline run with Claude; records every call to `fixtures/llm_cache.jsonl` (needs `ANTHROPIC_API_KEY`) |
+| `make record` | Live pipeline run with Claude; records every call to `fixtures/llm_cache.jsonl` (needs `ANTHROPIC_API_KEY`, or `SIGNALCORE_ANTHROPIC_API_KEY` as a fallback) |
 | `make run` | Run the pipeline: live if a key is set, else replay the recorded calls, else stub |
 | `make test` | Tests in stub mode (no key, no network) |
 | `make standalone` | `signalcore-standalone.html`: the whole app in one file with the latest run embedded |
 
 ### Modes
-- **live**: calls the Anthropic API (Opus 5.5 for reasoning, Sonnet 5.5 for judging and CAB parsing, Haiku 5.5 for per-item enrichment).
+- **live**: calls the Anthropic API with `ANTHROPIC_API_KEY`, or `SIGNALCORE_ANTHROPIC_API_KEY` if that is unset (some cloud environments withhold `ANTHROPIC_API_KEY` from sessions) (Opus 5.5 for reasoning, Sonnet 5.5 for judging and CAB parsing, Haiku 5.5 for per-item enrichment).
 - **replay**: answers from the recorded cache, offline and deterministic. Good for demos without wifi.
 - **stub**: local stand-ins for tests; numbers are real, wording is placeholder.
 

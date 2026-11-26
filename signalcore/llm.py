@@ -32,11 +32,17 @@ def cost(model, usage):
     return (tin * pi + usage.get("output_tokens", 0) * po) / 1e6
 
 
+def api_key():
+    """The Claude API key: ANTHROPIC_API_KEY if set, else SIGNALCORE_ANTHROPIC_API_KEY.
+    (Some cloud environments withhold ANTHROPIC_API_KEY from sessions.) Never log the value."""
+    return os.environ.get("ANTHROPIC_API_KEY") or os.environ.get("SIGNALCORE_ANTHROPIC_API_KEY") or None
+
+
 def default_mode():
     m = os.environ.get("SIGNALCORE_MODE")
     if m:
         return m
-    if os.environ.get("ANTHROPIC_API_KEY") or os.environ.get("ANTHROPIC_AUTH_TOKEN"):
+    if api_key() or os.environ.get("ANTHROPIC_AUTH_TOKEN"):
         return "live"
     return "replay" if CACHE.exists() and CACHE.stat().st_size else "stub"
 
@@ -71,7 +77,9 @@ class LLM:
         self._client = None
         if self.mode == "live":
             import anthropic
-            self._client = anthropic.Anthropic(max_retries=4, timeout=600)
+            key = api_key()
+            kw = {"api_key": key} if key else {}
+            self._client = anthropic.Anthropic(max_retries=4, timeout=600, **kw)
 
     @staticmethod
     def key(purpose, params):
