@@ -48,7 +48,10 @@ def run_evals(run):
         out["pattern_recovery"] = (hits / len(EXPECT), json.dumps(detail))
         # grounding
         c = dict(q("SELECT status, COUNT(*) FROM brief_claims WHERE run_id=? GROUP BY status", rid))
-        first = q("SELECT AVG(status='grounded') FROM brief_claims WHERE run_id=? AND attempt=1", rid)[0][0]
+        # retries overwrite claim rows, so the judge stashes the first-pass rate on the run
+        first = getattr(run, "first_pass", None)
+        if first is None:
+            first = q("SELECT AVG(status='grounded') FROM brief_claims WHERE run_id=? AND attempt=1", rid)[0][0]
         tot = sum(c.values())
         out["grounded_final"] = (c.get("grounded", 0) / tot if tot else 0, f"Claims kept after judging ({c.get('dropped', 0)} dropped)")
         out["grounded_first_pass"] = (first or 0, "Claims grounded on the first draft")

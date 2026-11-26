@@ -192,7 +192,8 @@ def score(run, skeptic=None):
             spen = sk["extra_penalty"] if sk else 1.0
             ev = int(round(100 * (W["q"] * Q + W["b"] * B + W["c"] * C) * pen * spen))
             if top_share > .6 and B < .3: arch = "commercial_mirage"
-            elif m["decline"] >= .3 and Q < .55: arch = "silent_churn"
+            elif m["decline"] >= .3 and (Q < .55 or len(m["declining"]) >= 2 * m["n_accounts"]):
+                arch = "silent_churn"  # usage falls across far more accounts than are complaining
             elif Q >= .45 and B < .25 and C < .65: arch = "vocal_minority"
             elif ev >= 70 and min(Q, B, C) >= .45: arch = "high_signal"
             else: arch = "emerging"

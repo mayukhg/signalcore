@@ -41,7 +41,9 @@ You receive machine-made clusters of customer feedback (sample texts and keyword
 - merge_into: the cluster_id of another cluster describing the SAME underlying problem, or -1. Only merge true duplicates.
 - title: 3-6 words naming the problem from the customer's point of view.
 - problem_statement: one sentence: who is blocked, what fails, and the consequence.
-- feature_key: the single best-matching feature key from the list provided.
+- feature_key: the most specific feature key from the list provided: the component that actually fails
+  (a provisioning or HR sync job is scim_sync, not user_lifecycle). Use "none" when no listed feature fits;
+  never force a loose match, because the feature key decides which telemetry is used as evidence.
 Be literal: name what customers describe, not solutions."""
 
 

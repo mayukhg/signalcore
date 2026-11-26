@@ -184,6 +184,9 @@ def judge(run, attempt=1):
             run.db.execute("INSERT OR REPLACE INTO pbr_docs VALUES (?,?,?)", (run.run_id, doc, json.dumps(run.pbr[doc], ensure_ascii=False)))
         run.db.commit()
         run.failed = failed
+        if attempt == 1:
+            n = stats["grounded"] + stats["failed"]
+            run.first_pass = stats["grounded"] / n if n else 0
         s.detail = {"summary": f"{stats['grounded']} claims grounded, {stats['failed']} failed ({stats['number_fail']} on numbers)", **stats}
     return failed
 
