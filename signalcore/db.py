@@ -22,6 +22,7 @@ RUN_VIEWS = {  # temp views pinned to one run, so agents don't need to know run 
     "v_dependency_paths": "SELECT * FROM main.dependency_paths WHERE run_id = '{run}'",
     "v_epic_value": "SELECT * FROM main.epic_value WHERE run_id = '{run}'",
     "v_opp_links": "SELECT opp_id, theme_id, similarity FROM main.opp_links WHERE run_id = '{run}'",
+    "v_gpl_links": "SELECT item_id, theme_id, similarity FROM main.gpl_links WHERE run_id = '{run}'",
 }
 MAX_ROWS = 200
 TIMEOUT_S = 8
@@ -40,7 +41,7 @@ def readonly(path, run_id):
     for name, sql in RUN_VIEWS.items():
         db.execute(f"CREATE TEMP VIEW {name} AS " + sql.format(run=run_id.replace("'", "")))
     allowed = AGENT_TABLES | set(RUN_VIEWS) | {"feedback_enrichment", "cab_items", "themes", "theme_scores",
-                                               "dependency_paths", "epic_value", "opp_links"}
+                                               "dependency_paths", "epic_value", "opp_links", "gpl_links"}
 
     def auth(action, arg1, arg2, dbname, source):
         if action == sqlite3.SQLITE_SELECT or action == sqlite3.SQLITE_FUNCTION:

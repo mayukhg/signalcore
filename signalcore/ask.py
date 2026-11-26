@@ -52,7 +52,13 @@ Use SQL for anything countable and search_evidence for what customers actually s
 Then call final_answer with a short answer (3-6 sentences or a compact list). Every number must come from a query you ran.
 Cite verbatims inline by id like [FB-00123] or [CAB-M02-L14] and list every cited id in cited_ids. If the data can't answer the question, say so.
 
-{SCHEMA_DOC}"""
+{SCHEMA_DOC}
+More columns (ground-truth gt_* columns are hidden, so never SELECT *; schema introspection is blocked):
+- roadmap_items(item_id, title, description, status in proposed|committed|in_build, target_quarter, cited_sources)
+- v_gpl_links(item_id, theme_id, similarity)  -- roadmap items linked to themes
+- jira_epics(epic_key, module_id, title, status, feature_key, remaining_weeks, owner_team, roadmap_item_id)
+- v_dependency_paths(theme_id, epic_key, blockers, blocked_weeks, critical_path), v_epic_value(epic_key, own_cod_week, inherited_cod_week, unblocks, cd3)
+- v_theme_scores also has: top account and top_share inside metrics JSON (json_extract(metrics, '$.top_share')), priority_rank, urgency_profile, skeptic_notes"""
 
 TOOLS = [
     {"name": "run_sql", "description": "Run one read-only SELECT (max 200 rows).",
@@ -69,26 +75,21 @@ TOOLS = [
 def ask(question, db_path, run_id, llm: LLM, retriever: Retriever):
     conn = readonly(db_path, run_id)
     trace, meter, t0 = [], Meter(), time.time()
+    quotes = {}  # every retrieved verbatim, captured before the trace truncates tool output
 
     def execute(name, inp):
         if name == "run_sql":
             return json.dumps(run_readonly_sql(conn, inp["sql"]), default=str)[:12000]
         if name == "search_evidence":
             res = retriever.search(inp["query"], k=max(1, min(15, inp.get("k") or 8)), source=inp.get("source") or None, segment=inp.get("segment") or None)
+            for r in res: quotes[r["id"]] = r
             return json.dumps(res, ensure_ascii=False)
         return "Unknown tool"
 
     final = llm.tool_loop("ask", model=HEAVY, system=SYSTEM, user=question, tools=TOOLS, execute=execute,
-                          finish_tool="final_answer", effort="medium", max_turns=8, meter=meter, trace=trace)
+                          finish_tool="final_answer", effort="medium", max_turns=12, meter=meter, trace=trace)
     conn.close()
     final = final or {"answer": "I couldn't finish this one within the step limit. Try a narrower question.", "cited_ids": []}
-    quotes = {}
-    for t in trace:
-        if t["tool"] == "search_evidence":
-            try:
-                for r in json.loads(t["output"]): quotes[r["id"]] = r
-            except json.JSONDecodeError:
-                pass
     cited = [quotes[i] for i in final["cited_ids"] if i in quotes] or list(quotes.values())[:5]
     steps = []
     for t in trace:
@@ -97,7 +98,7 @@ def ask(question, db_path, run_id, llm: LLM, retriever: Retriever):
             except json.JSONDecodeError: res = {"error": "truncated output"}
             steps.append({"tool": "run_sql", "sql": t["input"]["sql"], "result": res})
         else:
-            steps.append({"tool": "search_evidence", "query": t["input"]["query"], "hits": len(json.loads(t["output"])) if t["output"].startswith("[") else 0})
+            steps.append({"tool": "search_evidence", "query": t["input"]["query"], "hits": t["output"].count('"id": ')})
     out = {"question": question, "answer": final["answer"], "cited": cited, "steps": steps, "mode": llm.mode,
            "cost_usd": round(meter.cost, 4), "seconds": round(time.time() - t0, 1)}
     db = connect(db_path)

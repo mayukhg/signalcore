@@ -25,12 +25,15 @@ class Run:
         self.on_event = on_event or (lambda e: None)
         self._step_no = 0
         self._lock = threading.Lock()
+        self._qlock = threading.RLock()
         self.db.execute("INSERT OR REPLACE INTO agent_runs (run_id, started_at, mode, status) VALUES (?,?,?,?)",
                         (self.run_id, dt.datetime.now().isoformat(timespec="seconds"), self.llm.mode, "running"))
         self.db.commit()
 
     def q(self, sql, *args):
-        return self.db.execute(sql, args).fetchall()
+        # one sqlite connection is shared by agent threads; concurrent cursors can return empty results
+        with self._qlock:
+            return self.db.execute(sql, args).fetchall()
 
     @contextlib.contextmanager
     def step(self, node, label):

@@ -15,6 +15,7 @@ class ExistingRun(Run):
         self._step_no = self.db.execute("SELECT COALESCE(MAX(step_no),0) FROM agent_steps WHERE run_id=?", (run_id,)).fetchone()[0]
         import threading
         self._lock = threading.Lock()
+        self._qlock = threading.RLock()
 
     def step(self, node, label):
         return super().step(node, "Recalculation after PM override · " + label)
