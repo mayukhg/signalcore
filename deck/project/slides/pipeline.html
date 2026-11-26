@@ -4,16 +4,18 @@
 <h2>Deterministic math, model judgment</h2>
 <p class="lede">A LangGraph state machine. Code does joins and arithmetic; Claude reads, names, argues and writes. Dashed steps are code.</p>
 </div>
-<div class="grid4">
-<div class="step code"><p class="n">1 · code</p><h3>Ingest</h3><p>Seven sources to staging</p></div>
-<div class="step code"><p class="n">2 · code</p><h3>Resolve identity</h3><p>People to one account; redact PII</p></div>
-<div class="step"><p class="n">3 · Claude</p><h3>Cluster Agent</h3><p>Name themes, tag urgency</p></div>
-<div class="step"><p class="n">4 · Claude</p><h3>Triangulation</h3><p>SQL tools join telemetry and revenue</p></div>
-<div class="step code"><p class="n">5 · code</p><h3>Score + rules</h3><p>Pillars, concentration, coverage</p></div>
-<div class="step"><p class="n">6 · Claude</p><h3>Skeptic Agent</h3><p>Argues against; can only lower</p></div>
-<div class="step"><p class="n">7 · Claude</p><h3>Briefing Agent</h3><p>PM cards, replies, SLT brief</p></div>
-<div class="step"><p class="n">8 · Claude</p><h3>Grounding Judge</h3><p>Fails uncited claims, loops back</p></div>
+<div class="grid5">
+<div class="step code"><p class="n">1 · code</p><h3>Identity resolver</h3><p>Messy emails and names to accounts</p></div>
+<div class="step"><p class="n">2 · Sonnet</p><h3>CAB Agent</h3><p>Pains, asks, commitments, with lines</p></div>
+<div class="step"><p class="n">3 · Haiku</p><h3>Enrichment</h3><p>Urgency, sentiment, workarounds</p></div>
+<div class="step"><p class="n">4 · Opus</p><h3>Cluster Agent</h3><p>Names and maps themes</p></div>
+<div class="step code"><p class="n">5 · code</p><h3>Triangulate + trace</h3><p>SQL joins; Jira critical paths</p></div>
+<div class="step code"><p class="n">6 · code</p><h3>Score</h3><p>Evidence, CoD, CD3</p></div>
+<div class="step"><p class="n">7 · Opus + SQL</p><h3>Skeptic Agent</h3><p>Argues against; can only lower</p></div>
+<div class="step code"><p class="n">8 · code</p><h3>Risk detection</h3><p>Six portfolio risk types</p></div>
+<div class="step"><p class="n">9 · Opus</p><h3>PBR Agent</h3><p>Writes from a fixed fact table</p></div>
+<div class="step"><p class="n">10 · Sonnet + code</p><h3>Grounding Judge</h3><p>Rewrites twice, then drops</p></div>
 </div>
-<div class="footer"><p>Opus for reasoning steps · Haiku for per-item enrichment · Sonnet as judge · Langfuse traces</p><p class="pn"></p></div>
-<aside>Two choices to call out. First, identity resolution is its own step, because if a Gong speaker, a Zendesk requester and a Pendo visitor don’t map to one account, every score is wrong. Second, the skeptic is deterministic first: concentration and coverage are SQL, so they are cheap, testable and cannot hallucinate. The model explains and looks for what the rules miss, and it may only lower a score.</aside>
+<div class="footer"><p>Opus 5.5 for reasoning · Sonnet 5.5 for judging and CAB parsing · Haiku 5.5 for enrichment · $2.90 per full run</p><p class="pn"></p></div>
+<aside>Two choices to call out. Identity resolution is its own step, because if a Gong speaker, a Zendesk requester and a telemetry account don't map to one account, every score is wrong. And agents query through a read-only, allow-listed connection: writes, multiple statements and ground-truth columns are refused. A full run took under four minutes.</aside>
 </section>

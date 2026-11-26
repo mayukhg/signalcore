@@ -49,3 +49,23 @@ table{font-size:26px;color:var(--light)}
 .rings{position:absolute;left:1240px;top:300px;width:520px;height:480px}
 @keyframes rise{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:translateY(0)}}
 .in{animation:rise 520ms ease-out both;animation-delay:calc(var(--i,0) * 110ms)}
+.grid5{display:grid;grid-template-columns:repeat(5,1fr);gap:24px}
+.split{display:grid;grid-template-columns:480px 1136px;gap:48px;align-items:start}
+.split .head h2{font-size:52px}
+.shot{width:1136px;height:710px;object-fit:contain;border:2px solid var(--line);border-radius:12px;background:#05070A}
+.shot2{width:808px;height:505px;object-fit:contain;border:2px solid var(--line);border-radius:12px;background:#05070A}
+.cap{font-size:24px;color:var(--soft);line-height:1.4}
+.op{font-family:'Space Grotesk',Arial,sans-serif;font-size:48px;color:var(--faint);align-self:center}
+.stat{display:flex;flex-direction:column;gap:6px}
+.stat .mid{font-size:64px}
+table.grind{border-collapse:collapse;width:1664px}
+table.grind th{font-size:24px;letter-spacing:2px;text-transform:uppercase;text-align:left;padding:0 24px 16px 0;color:var(--do)}
+table.grind td{font-size:28px;line-height:1.35;padding:24px 24px 24px 0;border-top:2px solid var(--line);vertical-align:top;color:var(--soft)}
+table.grind td.g{color:var(--light);font-weight:600}
+.card ul{margin:0;padding-left:30px;display:flex;flex-direction:column;gap:12px}
+.card li{font-size:26px;line-height:1.35;color:var(--soft)}
+.card .quote{font-size:32px;line-height:1.45;color:var(--light)}
+.card .mid{font-size:72px;line-height:1}
+.card .big{font-size:96px;line-height:1}
+.card .small{font-size:24px}
+.card .tag{font-size:24px}

@@ -4,6 +4,24 @@ State: branch `v2-working-app`. Data generator, full LangGraph pipeline, FastAPI
 
 Needs a Claude API key: `ANTHROPIC_API_KEY`, or `SIGNALCORE_ANTHROPIC_API_KEY` if that is unset. The cloud environment withholds `ANTHROPIC_API_KEY` from sessions, so the key is provided as `SIGNALCORE_ANTHROPIC_API_KEY`; `signalcore/llm.py` (`api_key()`) reads either and passes it explicitly to the Anthropic client.
 
+## Status (2026-11-26, second session): steps 1-6 done
+
+- **Live run** `run-20261126-154725`: $2.90, 473K input / 220K output tokens, under 4 minutes. Evals: cluster precision 99% / recall 98%, 12/12 planted themes found, patterns 5/5, CAB recall and precision 100%, deal linking 100%, SSO-88 bottleneck found, PBR claims grounded 81% first pass / 91% kept.
+- **Fixes made after the first live run** (which scored patterns 3/5):
+  - Cluster prompt now asks for the most specific feature, or `none`, instead of forcing `user_lifecycle`.
+  - Silent churn also fires when usage falls across at least twice as many accounts as complain.
+  - The first-pass grounding eval was always 0, because retries overwrote claim rows.
+  - Ask: documented the roadmap, Jira and dependency columns; quotes are captured before trace truncation (this fixed a JSONDecodeError); 12 turns; `gpl_links` is readable through `v_gpl_links`.
+  - `Run.q` is serialized. Agent threads shared one sqlite connection and sometimes got empty results on bootstrap.
+  - Ask answers render markdown (tables, bold, lists).
+- **Replay cache** `fixtures/llm_cache.jsonl`: 167 entries (pipeline plus the 4 suggested Ask questions). It was pruned to the calls replay actually uses. A fresh clone with no key bootstraps in replay mode and answers all 4 questions offline (verified twice).
+- **Screenshots** are in `deck/screenshots/` (2880x1800). The deck artifact https://claude.ai/artifact/3cEoEoz9KqGbN8Pt5anvB5 was revised to 21 slides: it leads with the skeptic, uses the "your org" framing, adds Cost of Delay / CD3, the matrix, Grind → engine → Outputs and "real vs simulated", and uses live numbers. Its source is mirrored in `deck/project/`.
+- **Prototype artifact** https://claude.ai/artifact/HviD4VrrJqn67kjbMPWmDs now serves `signalcore-standalone.html` from the live run.
+
+Open items: the deck still has placeholders `[Your name]`, `[repo link]`, `[your email]` and the pilot success metric `[__]%`. Both artifacts are private until shared from the Share menu.
+
+## Original steps
+
 Status (2026-11-26): the Default environment has an `ANTHROPIC_API_KEY` variable, but the container this session ran in started before it was added, so the key was not visible. Start a **new session** so the variable loads. Network secrets cannot be used for api.anthropic.com. On a fresh clone, `make setup`, `make data` (fixed: the generator now creates `data/`) and `make test` (7 passed) all work.
 
 1. `make setup && make data && make record`. This is the first live run.

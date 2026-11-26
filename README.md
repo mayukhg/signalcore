@@ -20,6 +20,8 @@ Everything runs on a deterministic synthetic tenant ("Keystone Directory", a fic
 make demo            # venv + deps + data + latest run + app on http://localhost:8000
 ```
 
+No API key needed: without one, `make demo` replays the recorded live run (`fixtures/llm_cache.jsonl`), including answers to the four suggested Ask questions. With a key set, the app runs live.
+
 | Command | What it does |
 |---|---|
 | `make data` | Regenerate the synthetic tenant (seed 42) |

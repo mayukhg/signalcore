@@ -1,17 +1,14 @@
 <section id="trust">
-<div class="head">
+<div class="split">
+<div class="head" style="gap:28px">
 <p class="eyebrow">Evals and trust</p>
-<h2>Zero hallucinated metrics is a test, not a promise</h2>
+<h2>Quality is measured, not eyeballed</h2>
+<div class="stat"><p class="mid hs">99% / 98%</p><p class="small">cluster precision / recall on planted themes</p></div>
+<div class="stat"><p class="mid hs">5 / 5</p><p class="small">planted patterns recovered</p></div>
+<div class="stat"><p class="mid hs">91%</p><p class="small">PBR claims kept after judging (81% on the first draft)</p></div>
 </div>
-<div class="grid3">
-<div class="card in" style="--i:0"><p class="big hs">97%</p><p class="light">cluster precision against planted ground truth</p></div>
-<div class="card in" style="--i:1"><p class="big hs">93%</p><p class="light">cluster recall on the 12 planted themes</p></div>
-<div class="card in" style="--i:2"><p class="big hs">5 / 5</p><p class="light">planted patterns recovered by the scorer</p></div>
+<img class="shot" src="/_blob/118728964962e90b51e3d82928c44a9e" alt="Run and evals view: pipeline trace with model, cost per step, and eval scores">
 </div>
-<div class="grid2" style="gap:24px">
-<p class="small"><b class="light">Grounding judge:</b> every number must appear in, or aggregate from, a cited row. Causal claims need a Say and a Do citation.</p>
-<p class="small"><b class="light">Pattern check:</b> a brief can never greenlight a commercial mirage. Failures loop back twice, then the claim is dropped and logged.</p>
-</div>
-<div class="footer"><p>Demo run 2026-11-26 · clustering simulated with known error rates</p><p class="pn"></p></div>
-<aside>Be precise here: in the prototype, clustering is simulated with a realistic error rate so the eval harness can be shown end to end. Swapping in the real Cluster Agent keeps the same harness. The point is that ground truth is planted in the synthetic data, so quality is measured, not eyeballed.</aside>
+<div class="footer"><p>Live run 2026-11-26 · 473K input / 220K output tokens · $2.90</p><p class="pn"></p></div>
+<aside>Ground truth is planted in the synthetic data and the agents never see it. CAB statements were extracted at 100% recall and precision, every gap-tagged deal was linked to the right theme, and the planted bottleneck epic ranked first. The first live run scored 3 of 5 patterns; I traced it to a feature-mapping prompt and a scoring rule, fixed both, and re-ran. That loop is the point.</aside>
 </section>

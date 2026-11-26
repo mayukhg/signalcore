@@ -1,0 +1,19 @@
+<section id="cod" class="alt">
+<div class="head">
+<p class="eyebrow">Cost of Delay × Evidence</p>
+<h2>Rank by what waiting costs, discounted by how sure we are</h2>
+</div>
+<p class="formula">CD3 = Cost of Delay per week × Evidence/100 ÷ (build weeks + weeks blocked by other teams)</p>
+<div class="row" style="gap:20px">
+<div class="card" style="flex:1;gap:8px;padding:28px"><p class="tag do">Evidence</p><p class="mid">59</p></div>
+<p class="op">×</p>
+<div class="card" style="flex:1;gap:8px;padding:28px"><p class="tag do">CoD / week</p><p class="mid">$198K</p></div>
+<p class="op">÷</p>
+<div class="card" style="flex:1;gap:8px;padding:28px"><p class="tag do">Weeks</p><p class="mid">4+4</p></div>
+<p class="op">=</p>
+<div class="card" style="flex:1;gap:8px;padding:28px;border-color:var(--do)"><p class="tag do">CD3 · rank #1</p><p class="mid">$14.6K</p></div>
+</div>
+<p class="small">Patch policies, above. AI agent permissions has stronger evidence (91) and a higher CoD ($213K a week), but 10 build weeks plus 13 weeks blocked by another team's epic put it at #3. That points at the blocker, not the feature.</p>
+<div class="footer"><p>Live run 2026-11-26 · CoD = retention risk + deals waiting, per week</p><p class="pn"></p></div>
+<aside>Cost of Delay answers urgency: what does one more week of waiting cost, in retention risk on renewing accounts and in deals waiting on the gap. The Evidence Score discounts it by confidence. Dividing by duration, including blocked weeks, is CD3, Reinertsen's weighted shortest job first. Everything here is arithmetic in code, and the app shows it per theme.</aside>
+</section>
