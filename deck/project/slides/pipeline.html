@@ -1,0 +1,19 @@
+<section id="pipeline" class="alt">
+<div class="head">
+<p class="eyebrow">Under the hood</p>
+<h2>Deterministic math, model judgment</h2>
+<p class="lede">A LangGraph state machine. Code does joins and arithmetic; Claude reads, names, argues and writes. Dashed steps are code.</p>
+</div>
+<div class="grid4">
+<div class="step code"><p class="n">1 · code</p><h3>Ingest</h3><p>Seven sources to staging</p></div>
+<div class="step code"><p class="n">2 · code</p><h3>Resolve identity</h3><p>People to one account; redact PII</p></div>
+<div class="step"><p class="n">3 · Claude</p><h3>Cluster Agent</h3><p>Name themes, tag urgency</p></div>
+<div class="step"><p class="n">4 · Claude</p><h3>Triangulation</h3><p>SQL tools join telemetry and revenue</p></div>
+<div class="step code"><p class="n">5 · code</p><h3>Score + rules</h3><p>Pillars, concentration, coverage</p></div>
+<div class="step"><p class="n">6 · Claude</p><h3>Skeptic Agent</h3><p>Argues against; can only lower</p></div>
+<div class="step"><p class="n">7 · Claude</p><h3>Briefing Agent</h3><p>PM cards, replies, SLT brief</p></div>
+<div class="step"><p class="n">8 · Claude</p><h3>Grounding Judge</h3><p>Fails uncited claims, loops back</p></div>
+</div>
+<div class="footer"><p>Opus for reasoning steps · Haiku for per-item enrichment · Sonnet as judge · Langfuse traces</p><p class="pn"></p></div>
+<aside>Two choices to call out. First, identity resolution is its own step, because if a Gong speaker, a Zendesk requester and a Pendo visitor don’t map to one account, every score is wrong. Second, the skeptic is deterministic first: concentration and coverage are SQL, so they are cheap, testable and cannot hallucinate. The model explains and looks for what the rules miss, and it may only lower a score.</aside>
+</section>

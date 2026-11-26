@@ -1,0 +1,17 @@
+<section id="trust">
+<div class="head">
+<p class="eyebrow">Evals and trust</p>
+<h2>Zero hallucinated metrics is a test, not a promise</h2>
+</div>
+<div class="grid3">
+<div class="card in" style="--i:0"><p class="big hs">97%</p><p class="light">cluster precision against planted ground truth</p></div>
+<div class="card in" style="--i:1"><p class="big hs">93%</p><p class="light">cluster recall on the 12 planted themes</p></div>
+<div class="card in" style="--i:2"><p class="big hs">5 / 5</p><p class="light">planted patterns recovered by the scorer</p></div>
+</div>
+<div class="grid2" style="gap:24px">
+<p class="small"><b class="light">Grounding judge:</b> every number must appear in, or aggregate from, a cited row. Causal claims need a Say and a Do citation.</p>
+<p class="small"><b class="light">Pattern check:</b> a brief can never greenlight a commercial mirage. Failures loop back twice, then the claim is dropped and logged.</p>
+</div>
+<div class="footer"><p>Demo run 2026-11-26 · clustering simulated with known error rates</p><p class="pn"></p></div>
+<aside>Be precise here: in the prototype, clustering is simulated with a realistic error rate so the eval harness can be shown end to end. Swapping in the real Cluster Agent keeps the same harness. The point is that ground truth is planted in the synthetic data, so quality is measured, not eyeballed.</aside>
+</section>
