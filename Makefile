@@ -1,5 +1,5 @@
 PY ?= .venv/bin/python
-.PHONY: setup data run record demo test standalone clean
+.PHONY: setup data run record demo test standalone deck clean
 
 setup:            ## create venv and install dependencies
 	python3 -m venv .venv && .venv/bin/pip install -q -r requirements.txt
@@ -22,6 +22,9 @@ test:
 
 standalone:       ## single-file HTML with the latest run embedded
 	$(PY) -m signalcore.export
+
+deck:            ## single-file HTML pitch deck (slides + screenshots embedded)
+	$(PY) deck/build_standalone.py
 
 clean:
 	rm -f data/signalcore.db

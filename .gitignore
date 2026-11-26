@@ -7,3 +7,5 @@ data/*.db
 signalcore-standalone.html
 __pycache__/
 .pytest_cache/
+signalcore-deck.html
+signalcore-deck.pdf

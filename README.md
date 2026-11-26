@@ -28,6 +28,7 @@ No API key needed: without one, `make demo` replays the recorded live run (`fixt
 | `make record` | Live pipeline run with Claude; records every call to `fixtures/llm_cache.jsonl` (needs `ANTHROPIC_API_KEY`, or `SIGNALCORE_ANTHROPIC_API_KEY` as a fallback) |
 | `make run` | Run the pipeline: live if a key is set, else replay the recorded calls, else stub |
 | `make test` | Tests in stub mode (no key, no network) |
+| `make deck` | `signalcore-deck.html`: the pitch deck in one file (arrows to navigate, N for notes, F for full screen, print to PDF) |
 | `make standalone` | `signalcore-standalone.html`: the whole app in one file with the latest run embedded |
 
 ### Modes
