@@ -1,0 +1,155 @@
+"""FastAPI app: serves the UI and the JSON API.
+
+    uvicorn signalcore.api:app --port 8000
+"""
+import datetime as dt
+import json
+import threading
+from pathlib import Path
+
+from fastapi import FastAPI, HTTPException
+from fastapi.responses import FileResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
+from pydantic import BaseModel, Field
+
+from .ask import Retriever, ask as run_ask
+from .db import DEFAULT_DB, connect
+from .llm import LLM, default_mode
+from .state import build_state, latest_run
+
+ROOT = Path(__file__).resolve().parents[1]
+WEB = ROOT / "web"
+DB = DEFAULT_DB
+
+app = FastAPI(title="SignalCore")
+app.mount("/static", StaticFiles(directory=WEB), name="static")
+_events, _lock = {}, threading.Lock()
+_cache = {"state": {}, "retriever": {}}
+
+
+def ensure_data():
+    if not Path(DB).exists():
+        from .data.generate import build
+        build(DB)
+    db = connect(DB)
+    has = latest_run(db)
+    db.close()
+    if not has:
+        from .pipeline.graph import run_pipeline
+        mode = "replay" if default_mode() in ("replay", "live") and (ROOT / "fixtures" / "llm_cache.jsonl").exists() else "stub"
+        run_pipeline(DB, llm=LLM(mode), run_id="run-bootstrap")
+
+
+@app.on_event("startup")
+def startup():
+    ensure_data()
+
+
+def state(run_id=None):
+    db = connect(DB)
+    rid = run_id or latest_run(db)
+    db.close()
+    if rid not in _cache["state"]:
+        _cache["state"][rid] = build_state(DB, rid)
+    return _cache["state"][rid]
+
+
+def retriever(run_id):
+    if run_id not in _cache["retriever"]:
+        _cache["retriever"][run_id] = Retriever(DB, run_id)
+    return _cache["retriever"][run_id]
+
+
+@app.get("/")
+def index():
+    return FileResponse(WEB / "index.html")
+
+
+@app.get("/api/state")
+def get_state(run: str | None = None):
+    s = state(run)
+    return JSONResponse(s | {"llm_mode": default_mode()})
+
+
+class RunReq(BaseModel):
+    mode: str | None = Field(None, description="live | replay | stub")
+
+
+@app.post("/api/runs")
+def start_run(req: RunReq):
+    mode = req.mode or default_mode()
+    if mode == "live" and default_mode() != "live":
+        raise HTTPException(400, "Live runs need ANTHROPIC_API_KEY on the server.")
+    rid = "run-" + dt.datetime.now().strftime("%Y%m%d-%H%M%S")
+    with _lock:
+        _events[rid] = []
+
+    def on_event(e):
+        with _lock:
+            _events[rid].append(e | {"t": dt.datetime.now().isoformat(timespec="seconds")})
+
+    def work():
+        from .pipeline.graph import run_pipeline
+        try:
+            run_pipeline(DB, llm=LLM(mode), run_id=rid, on_event=on_event)
+        except Exception as e:  # recorded on the run row and in events
+            on_event({"type": "error", "message": f"{type(e).__name__}: {e}"})
+        _cache["state"].clear()
+
+    threading.Thread(target=work, daemon=True).start()
+    return {"run_id": rid, "mode": mode}
+
+
+@app.get("/api/runs/{rid}/events")
+def run_events(rid: str, after: int = 0):
+    with _lock:
+        ev = list(_events.get(rid, []))
+    return {"events": ev[after:], "next": len(ev)}
+
+
+class AskReq(BaseModel):
+    question: str = Field(..., min_length=3, max_length=500)
+
+
+@app.post("/api/ask")
+def post_ask(req: AskReq):
+    s = state()
+    rid = s["run"]["run_id"]
+    mode = default_mode()
+    llm = LLM(mode)
+    try:
+        out = run_ask(req.question, DB, rid, llm, retriever(rid))
+    except Exception as e:
+        if mode != "replay":
+            raise HTTPException(500, f"{type(e).__name__}: {e}")
+        prev = next((a for a in s.get("asks", []) if a["question"].strip().lower() == req.question.strip().lower()), None)
+        if not prev:
+            raise HTTPException(409, "Replay mode can only answer recorded questions. Pick a suggested question or add an API key.")
+        out = prev
+    _cache["state"].clear()
+    return out
+
+
+class OverrideReq(BaseModel):
+    theme_id: str
+    feature_key: str
+    effort_weeks: float = Field(..., gt=0, le=104)
+    reason: str = Field(..., min_length=5, max_length=500)
+    author: str = "PM"
+
+
+@app.post("/api/overrides")
+def post_override(req: OverrideReq):
+    """PM override of the build estimate: logged with a reason, then CoD/CD3 are recomputed for the current run."""
+    s = state()
+    rid = s["run"]["run_id"]
+    old = next((e["effort_weeks"] for e in s["estimates"] if e["feature_key"] == req.feature_key), None)
+    db = connect(DB)
+    db.execute("INSERT INTO pm_overrides (run_id, theme_id, field, old_value, new_value, reason, author, created_at) VALUES (?,?,?,?,?,?,?,?)",
+               (rid, req.theme_id, f"effort:{req.feature_key}", str(old), str(req.effort_weeks), req.reason, req.author,
+                dt.datetime.now().isoformat(timespec="seconds")))
+    db.commit(); db.close()
+    from .pipeline.rescore import rescore
+    rescore(DB, rid)
+    _cache["state"].clear()
+    return {"ok": True, "state": state(rid)}
