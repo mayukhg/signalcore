@@ -102,6 +102,7 @@ def rdate(rng, a, b):
 def build(db_path):
     rng = random.Random(42)
     db_path = Path(db_path)
+    db_path.parent.mkdir(parents=True, exist_ok=True)
     db_path.unlink(missing_ok=True)
     db = sqlite3.connect(db_path)
     db.executescript((ROOT / "schema.sql").read_text())

@@ -4,6 +4,8 @@ State: branch `v2-working-app`. Data generator, full LangGraph pipeline, FastAPI
 
 Needs `ANTHROPIC_API_KEY` set as an environment variable in the cloud environment.
 
+Status (2026-11-26): the Default environment has an `ANTHROPIC_API_KEY` variable, but the container this session ran in started before it was added, so the key was not visible. Start a **new session** so the variable loads. Network secrets cannot be used for api.anthropic.com. On a fresh clone, `make setup`, `make data` (fixed: the generator now creates `data/`) and `make test` (7 passed) all work.
+
 1. `make setup && make data && make record`. This is the first live run.
    - Watch for API errors in the live path of `signalcore/llm.py`: beta `fallbacks="default"` with server-side-fallback-2026-07-01 on Opus/Sonnet, `output_config.format` JSON schemas, strict tools in `skeptic.py` and `ask.py`, and echoing assistant content (including thinking blocks) back in `LLM.tool_loop`.
    - Check evals in the app (Run & evals tab) and fix prompts if themes or patterns regress.
