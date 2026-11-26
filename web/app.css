@@ -119,7 +119,7 @@ details summary{cursor:pointer;color:var(--accent);font-size:12.5px}
 .sugg{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
 .sugg button{background:none;border:1px dashed var(--line2);border-radius:999px;padding:3px 10px;font-size:12px;color:var(--muted)}
 .sugg button:hover{color:var(--fg);border-color:var(--accent)}
-.answer{font-size:14.5px;line-height:1.65;white-space:pre-wrap}
+.answer{font-size:14.5px;line-height:1.65}.answer p{margin:0 0 10px}.answer ul{margin:0 0 10px;padding-left:20px}.answer li{margin:3px 0}.answer .tablewrap{margin:4px 0 12px}
 .cid{font-family:var(--f-mono);font-size:11px;color:var(--do);background:#10202A;border-radius:4px;padding:0 4px;cursor:help}
 .steps{display:grid;gap:6px}
 .step{display:grid;grid-template-columns:28px minmax(0,1fr) auto;gap:10px;align-items:start;border-bottom:1px solid var(--line);padding:8px 0}

@@ -45,6 +45,26 @@ const QDESC = {'Do now': 'Strong evidence and high Cost of Delay. Staff it.', 'V
   'Schedule': 'Strong evidence, lower Cost of Delay. Plan it in.', 'Park': 'Weak evidence and low Cost of Delay. Acknowledge and revisit.'};
 function kpis(items) { return `<div class="kpis">${items.map(([v, l, s]) => `<div class="kpi"><div class="v">${v}</div><div class="l">${l}</div>${s ? `<div class="s">${s}</div>` : ''}</div>`).join('')}</div>`; }
 function head(eyebrow, title, lede, right = '') { return `<div class="viewhead"><div><div class="eyebrow">${eyebrow}</div><h1>${title}</h1>${lede ? `<p class="lede">${lede}</p>` : ''}</div>${right}</div>`; }
+// minimal markdown for agent answers: paragraphs, bullet lists, pipe tables, **bold**; escapes first
+function mdAnswer(text) {
+  const inline = t => citeChips(t).replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+  const lines = String(text).split('\n'), out = [];
+  for (let i = 0; i < lines.length;) {
+    const l = lines[i];
+    if (/^\s*\|/.test(l)) {
+      const rows = []; while (i < lines.length && /^\s*\|/.test(lines[i])) rows.push(lines[i++]);
+      const cells = r => r.trim().replace(/^\||\|$/g, '').split('|').map(c => c.trim());
+      const body = rows.filter(r => !/^\s*\|[\s:|-]+\|\s*$/.test(r));
+      const [h, ...rest] = body;
+      out.push(`<div class="tablewrap"><table><thead><tr>${cells(h).map(c => `<th>${inline(c)}</th>`).join('')}</tr></thead><tbody>${rest.map(r => `<tr>${cells(r).map(c => `<td>${inline(c)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`);
+    } else if (/^\s*[-*] /.test(l)) {
+      const items = []; while (i < lines.length && /^\s*[-*] /.test(lines[i])) items.push(lines[i++].replace(/^\s*[-*] /, ''));
+      out.push(`<ul>${items.map(x => `<li>${inline(x)}</li>`).join('')}</ul>`);
+    } else if (l.trim()) { out.push(`<p>${inline(l)}</p>`); i++; }
+    else i++;
+  }
+  return out.join('');
+}
 function citeChips(text) { return esc(text).replace(/\[((?:FB-\d+|CAB-M\d+-L\d+)(?:,\s*(?:FB-\d+|CAB-M\d+-L\d+))*)\]/g, (_, ids) => ids.split(/,\s*/).map(i => `<span class="cid" title="Cited source">${i}</span>`).join(' ')); }
 
 // label placement: greedy, avoids overlaps
@@ -339,7 +359,7 @@ async function doAsk(q) {
   catch (e) { out.innerHTML = `<div class="callout">${esc(e.message)}</div>`; }
 }
 function showAnswer(r) {
-  $('#askout').innerHTML = `<div class="answer">${citeChips(r.answer)}</div>
+  $('#askout').innerHTML = `<div class="answer">${mdAnswer(r.answer)}</div>
     <p class="note">${r.steps.length} tool calls · ${r.seconds}s · $${(+r.cost_usd).toFixed(3)} · mode ${esc(r.mode)}</p>
     ${r.cited.length ? `<h3 style="margin-top:12px">Cited verbatims</h3>${r.cited.map(c => `<div class="quote"><p>${esc(c.text)}</p><footer><span class="cid">${esc(c.id)}</span><span class="tag">${SRC[c.source] || c.source} ${esc(c.ref)}</span><span>${esc(c.account || '')}${c.segment ? ' · ' + c.segment : ''}</span><span class="mono">${esc(c.date)}</span></footer></div>`).join('')}` : ''}
     <details style="margin-top:12px"><summary>How it answered (${r.steps.length} steps)</summary>${r.steps.map((s, i) => s.tool === 'run_sql' ? `<div style="margin-top:10px"><span class="tag">${i + 1} · run_sql</span><pre class="code">${esc(s.sql)}</pre>${s.result.error ? `<div class="callout">${esc(s.result.error)}</div>` : `<div class="tablewrap" style="max-height:220px;overflow:auto"><table><thead><tr>${s.result.columns.map(c => `<th>${esc(c)}</th>`).join('')}</tr></thead><tbody>${s.result.rows.slice(0, 25).map(row => `<tr>${row.map(c => `<td>${esc(c)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`}</div>` : `<div style="margin-top:10px"><span class="tag">${i + 1} · search_evidence</span> <span class="muted">“${esc(s.query)}” → ${s.hits} hits</span></div>`).join('')}</details>`;
