@@ -64,6 +64,23 @@ CREATE TABLE telemetry_events (
 );
 CREATE INDEX ix_tel_feat ON telemetry_events(feature_key, account_id);
 
+
+------------------------------------------------------------------ delivery (Jira)
+CREATE TABLE jira_epics (
+  epic_key TEXT PRIMARY KEY, module_id TEXT NOT NULL REFERENCES modules(module_id), title TEXT NOT NULL,
+  status TEXT NOT NULL,                         -- not_started | in_progress | done
+  feature_key TEXT REFERENCES features(feature_key), remaining_weeks REAL NOT NULL, owner_team TEXT,
+  roadmap_item_id TEXT, gt_theme_id TEXT
+);
+CREATE TABLE jira_links (                       -- from_key BLOCKS to_key
+  from_key TEXT NOT NULL REFERENCES jira_epics(epic_key), to_key TEXT NOT NULL REFERENCES jira_epics(epic_key),
+  link_type TEXT NOT NULL DEFAULT 'blocks', PRIMARY KEY (from_key, to_key)
+);
+
+------------------------------------------------------------------ Customer Advisory Board notes (raw documents)
+CREATE TABLE cab_meetings (meeting_id TEXT PRIMARY KEY, held_on DATE, title TEXT, body TEXT);
+CREATE TABLE cab_gt (meeting_id TEXT, line_no INTEGER, account_id TEXT, theme_id TEXT, PRIMARY KEY (meeting_id, line_no));
+
 ------------------------------------------------------------------ written by the pipeline
 CREATE TABLE agent_runs (
   run_id TEXT PRIMARY KEY, started_at TIMESTAMP, finished_at TIMESTAMP, mode TEXT,   -- live | replay | stub
@@ -115,3 +132,22 @@ CREATE TABLE ask_log (
   ask_id INTEGER PRIMARY KEY AUTOINCREMENT, asked_at TIMESTAMP, question TEXT, answer TEXT, sql TEXT, rows TEXT,
   cost_usd REAL
 );
+CREATE TABLE cab_items (                       -- CAB Agent output: one row per extracted customer statement
+  run_id TEXT, item_id TEXT, meeting_id TEXT, line_no INTEGER, account_id TEXT, speaker TEXT,
+  kind TEXT,                                    -- pain | ask | commitment | praise
+  text TEXT, sentiment REAL, PRIMARY KEY (run_id, item_id)
+);
+CREATE TABLE dependency_paths (                 -- Dependency Tracer output
+  run_id TEXT, theme_id TEXT, epic_key TEXT, blockers TEXT, blocked_weeks REAL, critical_path TEXT,
+  PRIMARY KEY (run_id, theme_id)
+);
+CREATE TABLE epic_value (                       -- Cost of Delay inherited by blocking epics
+  run_id TEXT, epic_key TEXT, own_cod_week REAL, inherited_cod_week REAL, unblocks TEXT, cd3 REAL,
+  PRIMARY KEY (run_id, epic_key)
+);
+CREATE TABLE risks (
+  run_id TEXT, risk_id TEXT, kind TEXT, severity TEXT, title TEXT, detail TEXT, cod_week REAL,
+  theme_id TEXT, module_id TEXT, owner TEXT, citations TEXT, PRIMARY KEY (run_id, risk_id)
+);
+CREATE TABLE pbr_docs (run_id TEXT, module_id TEXT, doc TEXT, PRIMARY KEY (run_id, module_id));   -- JSON doc; claims in brief_claims
+CREATE TABLE opp_links (run_id TEXT, opp_id TEXT, theme_id TEXT, similarity REAL, PRIMARY KEY (run_id, opp_id));

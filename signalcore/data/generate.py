@@ -11,6 +11,7 @@ from collections import defaultdict
 from pathlib import Path
 
 from .text import render, FIRST
+from .delivery import build_jira, build_cab
 
 ROOT = Path(__file__).resolve().parents[2]
 TODAY = dt.date(2026, 11, 26)
@@ -269,6 +270,8 @@ def build(db_path):
                     eid += 1; rows.append((f"EV-{eid:07d}", ts.isoformat(timespec="minutes"), a["id"], u, f,
                                            "task_abandoned" if ab else "task_completed", int(rng.gauss(95e3 if ab else 60e3, 2e4))))
     db.executemany("INSERT INTO telemetry_events VALUES (?,?,?,?,?,?,?)", rows)
+    build_jira(db)
+    build_cab(db, members, customers, contacts, TODAY)
     db.commit()
     db.close()
     return db_path
