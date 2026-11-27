@@ -72,3 +72,12 @@ web/                        single-page UI (no build step)
 tests/                      end-to-end and unit tests
 deck/project/               pitch deck source
 ```
+
+## Product analytics
+
+Usage, decision, AI-quality and cost events go to Mixpanel when `MIXPANEL_TOKEN` is set (off by default). Browser events pass through an allow-listed server relay (`POST /api/track`), so the page never holds the token, and the standalone file sends nothing. The metric definitions, alert thresholds and event schema are in [`docs/METRICS.md`](docs/METRICS.md).
+
+```bash
+MIXPANEL_TOKEN=<project token> make demo              # track real usage; add ?role=PM|ProductOps|Exec|EngLead to the URL
+python scripts/seed_mixpanel.py --project-id <id>     # 60 days of simulated pilot usage, every event tagged demo=true
+```
