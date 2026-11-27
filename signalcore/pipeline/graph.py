@@ -73,12 +73,31 @@ def build(run: Run):
 def run_pipeline(db_path=None, llm=None, run_id=None, on_event=None):
     kw = {k: v for k, v in dict(db_path=db_path, llm=llm, run_id=run_id, on_event=on_event).items() if v is not None}
     run = Run(**kw)
-    try:
-        build(run).invoke({"attempt": 1}, {"recursion_limit": 60})
-        run.finish("done")
-    except Exception as e:
-        run.finish(f"failed: {type(e).__name__}: {e}"[:300])
-        raise
+    from .. import observability as obs
+    from ..evaluation.run_scores import push_run_scores
+    with obs.root("signalcore.pipeline", input={"run_id": run.run_id, "mode": run.llm.mode},
+                  metadata={"run_id": run.run_id, "mode": run.llm.mode}, tags=["pipeline", run.llm.mode], session_id=run.run_id) as ctx:
+        run.trace = ctx
+        try:
+            build(run).invoke({"attempt": 1}, {"recursion_limit": 60})
+            run.finish("done")
+        except Exception as e:
+            run.finish(f"failed: {type(e).__name__}: {e}"[:300])
+            if getattr(ctx, "span", None):
+                ctx.span.update(level="ERROR", status_message=str(e)[:500])
+            raise
+        finally:
+            if getattr(ctx, "span", None):
+                r = run.db.execute("SELECT status, cost_usd, tokens_in, tokens_out FROM agent_runs WHERE run_id=?", (run.run_id,)).fetchone()
+                top = run.db.execute("SELECT theme_id, evidence_score, archetype, ROUND(cd3) FROM theme_scores WHERE run_id=? ORDER BY priority_rank LIMIT 5",
+                                     (run.run_id,)).fetchall()
+                ctx.span.update(output={"status": r[0], "top_by_cd3": [list(t) for t in top]},
+                                metadata={"cost_usd": round(r[1] or 0, 4), "tokens_in": r[2], "tokens_out": r[3]})
+                try:
+                    push_run_scores(run.db, run.run_id, ctx)
+                finally:
+                    obs.flush()
+    run.trace_url = obs.trace_url(ctx)
     return run.run_id
 
 

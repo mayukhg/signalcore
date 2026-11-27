@@ -52,6 +52,7 @@ class Meter:
         self.tokens_in = self.tokens_out = self.calls = 0
         self.cost = 0.0
         self.models = set()
+        self.ctx = None          # Langfuse parent (observability.Ctx) for calls metered here
         self._lock = threading.Lock()
 
     def add(self, model, usage):
@@ -111,6 +112,14 @@ class LLM:
             raise RuntimeError(f"{purpose}: model declined ({resp.get('stop_details')})")
         if meter is not None:
             meter.add(resp.get("model", params["model"]), resp.get("usage", {}))
+            if meter.ctx is not None:
+                try:
+                    from . import observability
+                    m = resp.get("model", params["model"])
+                    observability.generation(meter.ctx, name=purpose, model=m, params=params, response=resp,
+                                             cost_usd=cost(m, resp.get("usage", {})), mode=self.mode)
+                except Exception:   # tracing must never break a run
+                    pass
         return resp
 
     # ------------------------------------------------------------------ helpers

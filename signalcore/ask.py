@@ -72,9 +72,33 @@ TOOLS = [
 ]
 
 
-def ask(question, db_path, run_id, llm: LLM, retriever: Retriever):
+def ask(question, db_path, run_id, llm: LLM, retriever: Retriever, trace_tags=None, parent_ctx=None):
+    """Answer a question; traced to Langfuse (with code-based scores) when observability is enabled."""
+    from . import observability as obs
+    from .evaluation import scorers
+    cm = obs.child(parent_ctx, "signalcore.ask", as_type="agent", input={"question": question}) if parent_ctx and parent_ctx.trace_id \
+        else obs.root("signalcore.ask", input={"question": question}, metadata={"run_id": run_id, "mode": llm.mode},
+                      tags=["ask", llm.mode] + list(trace_tags or []))
+    with cm as ctx:
+        out = _ask(question, db_path, run_id, llm, retriever, ctx)
+        if ctx.trace_id:
+            known = {r["id"] for r in retriever.rows}
+            for sc in (scorers.citation_validity(out, known), scorers.numbers_grounded(out)):
+                obs.score(ctx, f"ask.{sc['name']}", sc["value"], comment=sc["comment"])
+            obs.score(ctx, "ask.cost_usd", float(out["cost_usd"]))
+            obs.score(ctx, "ask.latency_s", float(out["seconds"]))
+            if getattr(ctx, "span", None):
+                ctx.span.update(output={"answer": out["answer"], "cited": [c.get("id") for c in out["cited"]]},
+                                metadata={"tool_calls": len(out["steps"]), "cost_usd": out["cost_usd"]})
+            out["trace_id"] = ctx.trace_id
+    obs.flush()
+    return out
+
+
+def _ask(question, db_path, run_id, llm, retriever, ctx=None):
     conn = readonly(db_path, run_id)
     trace, meter, t0 = [], Meter(), time.time()
+    meter.ctx = ctx if ctx is not None and ctx.trace_id else None
     quotes = {}  # every retrieved verbatim, captured before the trace truncates tool output
 
     def execute(name, inp):

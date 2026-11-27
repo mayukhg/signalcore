@@ -1,5 +1,5 @@
 PY ?= .venv/bin/python
-.PHONY: setup data run record demo test standalone deck clean
+.PHONY: setup data run record demo test standalone deck clean lf-sync lf-eval lf-eval-live
 
 setup:            ## create venv and install dependencies
 	python3 -m venv .venv && .venv/bin/pip install -q -r requirements.txt
@@ -25,6 +25,16 @@ standalone:       ## single-file HTML with the latest run embedded
 
 deck:            ## single-file HTML pitch deck (slides + screenshots embedded)
 	$(PY) deck/build_standalone.py
+
+LF ?= https://us.cloud.langfuse.com
+lf-sync:          ## create/refresh Langfuse datasets (planted themes, Ask golden set, judge calibration)
+	LANGFUSE_BASE_URL=$(LF) $(PY) -m signalcore.evaluation.experiments sync
+
+lf-eval:          ## no model cost: score the latest pipeline run against planted ground truth in Langfuse
+	LANGFUSE_BASE_URL=$(LF) $(PY) -m signalcore.evaluation.experiments run --suite planted
+
+lf-eval-live:     ## live Claude: Ask golden set (code + LLM-judge scores) and Grounding Judge calibration
+	LANGFUSE_BASE_URL=$(LF) SIGNALCORE_MODE=live $(PY) -m signalcore.evaluation.experiments run --suite all --mode live
 
 clean:
 	rm -f data/signalcore.db

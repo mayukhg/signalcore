@@ -2,12 +2,16 @@
 import contextlib
 import datetime as dt
 import json
+import sys
 import os
 import threading
 import time
 
 from ..db import connect, DEFAULT_DB
 from ..llm import LLM, Meter
+
+
+AGENT_NODES = {"cab", "enrich", "cluster", "skeptic", "pbr", "judge"}
 
 
 class Step:
@@ -45,9 +49,23 @@ class Run:
         t0 = time.time()
         started = dt.datetime.now().isoformat(timespec="seconds")
         self.on_event({"type": "step_started", "step_no": no, "node": node, "label": label})
+        from .. import observability
+        span_cm = observability.child(getattr(self, "trace", None), node, as_type="agent" if s.node in AGENT_NODES else "span",
+                                      input={"label": label})
+        s.meter.ctx = span_cm.__enter__()
         try:
             yield s
+        except BaseException:
+            span_cm.__exit__(*sys.exc_info())
+            span_cm = None
+            raise
         finally:
+            if span_cm is not None:
+                sp = getattr(s.meter.ctx, "span", None)
+                if sp is not None:
+                    sp.update(output=s.detail.get("summary"), metadata={"step_no": no, "cost_usd": round(s.meter.cost, 5),
+                                                                       "tokens_in": s.meter.tokens_in, "tokens_out": s.meter.tokens_out})
+                span_cm.__exit__(None, None, None)
             ms = int((time.time() - t0) * 1000)
             with self._lock:
                 self.db.execute("INSERT OR REPLACE INTO agent_steps VALUES (?,?,?,?,?,?,?,?,?,?,?)",

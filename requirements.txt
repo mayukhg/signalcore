@@ -7,3 +7,4 @@ numpy>=2.5
 scipy
 pytest>=9
 httpx>=0.28
+langfuse==5.2.0
