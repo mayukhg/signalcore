@@ -38,3 +38,9 @@ Status (2026-11-26): the Default environment has an `ANTHROPIC_API_KEY` variable
    - Use real numbers from the live run.
 5. `make standalone`, then publish `signalcore-standalone.html` to the prototype artifact https://claude.ai/artifact/HviD4VrrJqn67kjbMPWmDs.
 6. Push the branch, and give the user the artifact link plus `make demo` instructions.
+
+## Status (2026-11-27): Langfuse evaluation framework
+
+- Langfuse US (`https://us.cloud.langfuse.com`) keys are a network secret on the **signalcore** cloud environment (injected by the proxy; no env vars needed). `api.mixpanel.com` and the Mixpanel service account are on the same environment.
+- Done and verified: tracing (traced replay run: 19 step spans, 150 generations, 36 scores), the three datasets (`make lf-sync`), and the planted-themes experiment on `run-20261126-154725` (found 12/12, feature 12/12, pattern 5/5).
+- To do in a session that has `SIGNALCORE_ANTHROPIC_API_KEY` (add it to the signalcore environment's variables): `make lf-eval-live`, which runs the Ask golden set (code scores + Claude Sonnet judge) and Grounding Judge calibration. About $2–3. Then record the baselines in `docs/EVALUATION.md`.
