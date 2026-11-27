@@ -12,6 +12,7 @@ from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
+from . import analytics
 from .ask import Retriever, ask as run_ask
 from .db import DEFAULT_DB, connect
 from .llm import LLM, default_mode
@@ -73,6 +74,8 @@ def get_state(run: str | None = None):
 
 class RunReq(BaseModel):
     mode: str | None = Field(None, description="live | replay | stub")
+    user: str | None = None
+    role: str | None = None
 
 
 @app.post("/api/runs")
@@ -95,7 +98,16 @@ def start_run(req: RunReq):
         except Exception as e:  # recorded on the run row and in events
             on_event({"type": "error", "message": f"{type(e).__name__}: {e}"})
         _cache["state"].clear()
+        if analytics.enabled():
+            db = connect(DB)
+            try:
+                completed, audited = analytics.run_summary(db, rid)
+                analytics.track("Pipeline Run Completed", req.user or "signalcore-server", role=req.role, **completed)
+                analytics.track("Roadmap Audited", req.user or "signalcore-server", role=req.role, **audited)
+            finally:
+                db.close()
 
+    analytics.track("Pipeline Run Started", req.user or "signalcore-server", role=req.role, run_id=rid, mode=mode)
     threading.Thread(target=work, daemon=True).start()
     return {"run_id": rid, "mode": mode}
 
@@ -109,6 +121,8 @@ def run_events(rid: str, after: int = 0):
 
 class AskReq(BaseModel):
     question: str = Field(..., min_length=3, max_length=500)
+    user: str | None = None
+    role: str | None = None
 
 
 @app.post("/api/ask")
@@ -117,15 +131,22 @@ def post_ask(req: AskReq):
     rid = s["run"]["run_id"]
     mode = default_mode()
     llm = LLM(mode)
+    who = dict(distinct_id=req.user or "anonymous", role=req.role, mode=mode)
+    analytics.track("Question Asked", **who, question_length=len(req.question))
+    t0 = dt.datetime.now()
     try:
         out = run_ask(req.question, DB, rid, llm, retriever(rid))
     except Exception as e:
-        if mode != "replay":
-            raise HTTPException(500, f"{type(e).__name__}: {e}")
-        prev = next((a for a in s.get("asks", []) if a["question"].strip().lower() == req.question.strip().lower()), None)
+        prev = next((a for a in s.get("asks", []) if a["question"].strip().lower() == req.question.strip().lower()), None) if mode == "replay" else None
         if not prev:
+            analytics.track("Question Answered", **who, success=False, error=type(e).__name__,
+                            latency_s=round((dt.datetime.now() - t0).total_seconds(), 2))
+            if mode != "replay":
+                raise HTTPException(500, f"{type(e).__name__}: {e}")
             raise HTTPException(409, "Replay mode can only answer recorded questions. Pick a suggested question or add an API key.")
         out = prev
+    analytics.track("Question Answered", **who, success=True, tool_calls=len(out.get("steps", [])), cited_count=len(out.get("cited", [])),
+                    cost_usd=out.get("cost_usd"), latency_s=round((dt.datetime.now() - t0).total_seconds(), 2))
     _cache["state"].clear()
     return out
 
@@ -136,6 +157,8 @@ class OverrideReq(BaseModel):
     effort_weeks: float = Field(..., gt=0, le=104)
     reason: str = Field(..., min_length=5, max_length=500)
     author: str = "PM"
+    user: str | None = None
+    role: str | None = None
 
 
 @app.post("/api/overrides")
@@ -150,6 +173,28 @@ def post_override(req: OverrideReq):
                 dt.datetime.now().isoformat(timespec="seconds")))
     db.commit(); db.close()
     from .pipeline.rescore import rescore
+    before = next((t["rank"] for t in s["themes"] if t["id"] == req.theme_id), None)
     rescore(DB, rid)
     _cache["state"].clear()
-    return {"ok": True, "state": state(rid)}
+    new = state(rid)
+    after = next((t["rank"] for t in new["themes"] if t["id"] == req.theme_id), None)
+    who = dict(distinct_id=req.user or "anonymous", role=req.role or req.author)
+    analytics.track("Estimate Overridden", **who, theme_id=req.theme_id, feature_key=req.feature_key, old_weeks=old,
+                    new_weeks=req.effort_weeks, rank_before=before, rank_after=after)
+    analytics.track("Decision Recorded", **who, kind="override", theme_id=req.theme_id)
+    return {"ok": True, "state": new}
+
+
+class TrackReq(BaseModel):
+    event: str = Field(..., pattern=r"^(App Opened|View Viewed|Theme Opened|Evidence Inspected|PBR Exported|Decision Recorded)$")
+    user: str = Field(..., min_length=4, max_length=64)
+    role: str | None = Field(None, max_length=32)
+    props: dict = Field(default_factory=dict)
+
+
+@app.post("/api/track")
+def post_track(req: TrackReq):
+    """Relay for browser events (allow-listed names, scalar properties only), so the page never needs the token."""
+    props = {k[:40]: v for k, v in list(req.props.items())[:20] if isinstance(v, (str, int, float, bool)) and k not in ("token", "distinct_id", "time")}
+    analytics.track(req.event, req.user, role=req.role, mode=default_mode(), **props)
+    return {"ok": True, "tracking": analytics.enabled()}

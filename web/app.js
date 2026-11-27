@@ -15,6 +15,10 @@ const PROFILE = {expedite: 'Expedite: cost is being incurred now', fixed_date: '
 const SRC = {gong: 'Gong', zendesk: 'Zendesk', jira: 'Jira', idea_portal: 'Idea portal', cab: 'CAB', cab_note: 'CAB note'};
 const chip = a => `<span class="chip a-${a}">${ARCH[a] || a}</span>`;
 let S = null, selected = null, cabSel = null, pbrSel = 'portfolio', polling = null;
+// Product analytics (docs/METRICS.md). Anonymous per-browser id; role from ?role=PM|ProductOps|Exec|EngLead.
+const ME = (() => { try { let id = localStorage.getItem('sc_uid'); if (!id) { id = 'u-' + Math.random().toString(36).slice(2, 10); localStorage.setItem('sc_uid', id); } return id; } catch (e) { return 'u-anonymous'; } })();
+const ROLE = (() => { const m = location.search.match(/[?&]role=([\w-]{2,32})/); try { if (m) localStorage.setItem('sc_role', m[1]); return m ? m[1] : (localStorage.getItem('sc_role') || 'PM'); } catch (e) { return m ? m[1] : 'PM'; } })();
+function track(event, props = {}) { if (SNAP) return; try { fetch('/api/track', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({event, user: ME, role: ROLE, props})}).catch(() => {}); } catch (e) {} }
 
 function toast(msg, err) { const t = $('#toast'); t.textContent = msg; t.className = 'toast on' + (err ? ' err' : ''); clearTimeout(toast.t); toast.t = setTimeout(() => t.className = 'toast', 2600); }
 function copy(text, msg) {
@@ -27,12 +31,12 @@ const api = {
   async state() { if (SNAP) return SNAP.state; const r = await fetch('/api/state'); if (!r.ok) throw new Error(await r.text()); return r.json(); },
   async ask(q) {
     if (SNAP) { const a = SNAP.state.asks.find(x => x.question.trim().toLowerCase() === q.trim().toLowerCase()); if (!a) throw new Error('This standalone copy replays recorded questions only. Pick one of the suggestions, or run the live app to ask anything.'); return a; }
-    const r = await fetch('/api/ask', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({question: q})});
+    const r = await fetch('/api/ask', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({question: q, user: ME, role: ROLE})});
     if (!r.ok) throw new Error((await r.json()).detail || 'Ask failed'); return r.json();
   },
-  async run(mode) { const r = await fetch('/api/runs', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({mode})}); if (!r.ok) throw new Error((await r.json()).detail); return r.json(); },
+  async run(mode) { const r = await fetch('/api/runs', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({mode, user: ME, role: ROLE})}); if (!r.ok) throw new Error((await r.json()).detail); return r.json(); },
   async events(id, after) { return (await fetch(`/api/runs/${id}/events?after=${after}`)).json(); },
-  async override(body) { const r = await fetch('/api/overrides', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body)}); if (!r.ok) throw new Error(JSON.stringify((await r.json()).detail)); return r.json(); },
+  async override(body) { const r = await fetch('/api/overrides', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({...body, user: ME, role: ROLE})}); if (!r.ok) throw new Error(JSON.stringify((await r.json()).detail)); return r.json(); },
 };
 
 // ------------------------------------------------------------------ shared bits
@@ -188,7 +192,7 @@ function renderDetail() {
     catch (err) { toast(err.message, true); }
   };
 }
-function select(id) { selected = id; renderPrioritize(); if (window.innerWidth < 1050) $('#detail').scrollIntoView({behavior: 'smooth'}); }
+function select(id) { selected = id; renderPrioritize(); { const t = TH()[id]; if (t) track('Theme Opened', {theme_id: t.id, archetype: t.archetype, quadrant: quadrant(t), rank: t.rank, evidence_score: t.evidence, cod_week_usd: Math.round(t.cod)}); } if (window.innerWidth < 1050) $('#detail').scrollIntoView({behavior: 'smooth'}); }
 
 // ------------------------------------------------------------------ TRIANGULATION
 function renderTriangulation() {
@@ -313,7 +317,7 @@ function renderPbr() {
         <details class="facts"><summary>${c.facts.length} cited fact${c.facts.length === 1 ? '' : 's'}</summary>${c.facts.map(f => `<div><span class="mono faint">${esc(f.fact_id.split(':')[1])}</span> ${esc(f.label)}: <b style="color:var(--fg)">${esc(f.value)}</b></div>`).join('')}</details></div>`).join('') : ''; }).join('')}
      ${d.dropped.length ? `<details style="margin-top:14px"><summary>${d.dropped.length} claims dropped by the judge</summary>${d.dropped.map(x => `<div class="quote"><p>${esc(x.text)}</p><footer>${esc(x.judge)}</footer></div>`).join('')}</details>` : ''}</div>`;
   $$('[data-d]', v).forEach(b => b.onclick = () => { pbrSel = b.dataset.d; renderPbr(); });
-  $('#pbrcopy').onclick = () => copy(pbrMarkdown(d), 'PBR copied as Markdown');
+  $('#pbrcopy').onclick = () => { copy(pbrMarkdown(d), 'PBR copied as Markdown'); track('PBR Exported', {doc: pbrSel, format: 'markdown'}); track('Decision Recorded', {kind: 'pbr_export', doc: pbrSel}); };
 }
 
 // ------------------------------------------------------------------ EXECUTIVE
@@ -453,11 +457,17 @@ function route() {
   $$('.view').forEach(s => s.hidden = s.dataset.view !== v);
   $$('nav.tabs a').forEach(a => a.getAttribute('href') === '#' + v ? a.setAttribute('aria-current', 'page') : a.removeAttribute('aria-current'));
   if (v === 'prioritize' && S) renderPrioritize();
+  if (S && route.last !== v) { route.last = v; track('View Viewed', {view: v}); }
 }
 async function load() {
-  try { S = await api.state(); S.llm_mode = S.llm_mode || (SNAP ? 'snapshot' : 'replay'); $('#loading').hidden = true; renderAll(); route(); }
+  try { S = await api.state(); S.llm_mode = S.llm_mode || (SNAP ? 'snapshot' : 'replay'); $('#loading').hidden = true; renderAll(); route(); if (!load.opened) { load.opened = 1; track('App Opened', {view: location.hash.slice(1) || 'prioritize'}); } }
   catch (e) { $('#loading').textContent = 'Could not load data: ' + e.message; }
 }
+document.addEventListener('toggle', e => {
+  const d = e.target; if (!d.open || !d.querySelector) return; const t = (d.querySelector('summary') || {}).textContent || '';
+  const kind = /checks it ran/.test(t) ? 'skeptic_checks' : /cited fact/.test(t) ? 'cited_facts' : /linked deals/.test(t) ? 'linked_deals' : /How it answered/.test(t) ? 'sql' : null;
+  if (kind) track('Evidence Inspected', {kind, theme_id: kind === 'sql' ? null : selected, view: location.hash.slice(1) || 'prioritize'});
+}, true);
 window.addEventListener('hashchange', () => { route(); window.scrollTo(0, 0); });
 load();
 })();
